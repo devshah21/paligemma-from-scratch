@@ -36,3 +36,10 @@ loss_i = cross_entropy_loss(logits, labels, axis=0) # we teach the model which i
 loss_t = cross_entropy_loss(logits, labels, axis=1)
 loss = (loss_i + loss_t) / 2
 ```
+- **what is the problem with CLIP**
+    - the problem is that we are using cross entropy loss
+
+- **understanding importance of numerical stability for softmax**
+    - the problem is that the softmax function is numerically unstable
+        - in other words, the exponential function grows very fast and it may not be able to fit into a 32 bit floating-point (in computers)
+    - 
