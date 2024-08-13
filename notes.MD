@@ -42,4 +42,16 @@ loss = (loss_i + loss_t) / 2
 - **understanding importance of numerical stability for softmax**
     - the problem is that the softmax function is numerically unstable
         - in other words, the exponential function grows very fast and it may not be able to fit into a 32 bit floating-point (in computers)
-    - 
+    - what we need to do is make the softmax function numerically stable
+        - in order to do this, we do not make the exponential grow to infinity: $\frac{c \cdot e^{a_i}}{c \cdot \sum_{k=1}^{N} e^{a_k}} 
+= \frac{e^{\log(c)} \cdot e^{a_i}}{e^{\log(c)} \cdot \sum_{k=1}^{N} e^{a_k}} 
+= \frac{e^{a_i + \log(c)}}{\sum_{k=1}^{N} e^{a_k + \log(c)}}$
+        - what we can do is that we set $log(c) = -max(a_i)$, in doing so, it will be less likely the exponential will go to infinity
+
+- **normalization factor in the softmax**
+    - since we have a matrix of columns and rows which contain the dot products of the word and text embeddings, we cannot go through all the elements since that is very compute heavy
+        - instead, since the softmax loss is asymmetric, the normalization (softmax) can be performed independently twice, once across the images and once across texts
+    - in the contrastive paper, instead of using the cross-entropy loss, they proposed to use sigmoid loss
+        - the main idea is that we don't treat the loss over a column / row, instead we treat each entry in the matrix as a binary classification task
+            - in other words, it should either be 0 or 1 and we treat them independently from the other entries. this is done by using the **sigmoid** function
+            - since we are treating them independently, we don't have to worry about the complexities of normalization over large matrices, which simplifies the computation and improves numerical stability
