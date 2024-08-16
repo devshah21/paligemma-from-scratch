@@ -32,4 +32,40 @@ class SiglipVisionConfig:
         self.attention_dropout = attention_dropout
         self.layer_norm_eps = layer_norm_eps
         self.num_image_tokens = num_image_tokens
+        
+class SiglipVisionTransformer(nn.Module):
+    
+    def __init__(self, config: SiglipVisionConfig):
+        super().__init__()
+        self.config = config
+        embed_dim = config.hidden_size
+        
+        self.embeddings = SiglipVisionEmbeddings(config) # get the embeddings / patches from vision embeddings
+        self.encoder = SiglipEncoder(config) # we will run it through a list of layers of transformers
+        
+        self.post_layernorm = nn.LayerNorm(embed_dim, eps=config.layer_norm_eps) # layer normalization
+    
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        
+        hidden_states = self.embeddings(pixel_values) # convert them into embeddings (extracting patches)
+        
+        last_hidden_state = self.encoder(inputs_embeds=hidden_states) # the encoder is a list of layers of the transformer (multi-head attention, norm, feed-forward)
+        
+        last_hidden_state = self.post_layernorm(last_hidden_state) # layer normalization 
+        
+        return last_hidden_state
+
+
+class SiglipVisionModel(nn.Module):
+    
+    def __init__(self, config: SiglipVisionConfig):
+        super().__init__()
+        self.config = config
+        self.vision_model = SiglipVisionTransformer(config)
+    
+    def forward(self, pixel_values):
+        # [batch_size, channels, height, width] -> [batch_size, num_patches, embed_dim]
+        # our vision transformer will convert into this output dimension
+        # and it will return a list of embeddings of size embed_dim
+        return self.vision_model(pixel_values=pixel_values)
                  
