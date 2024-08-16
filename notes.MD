@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- Vision Transformers
+- [Vision Transformers](#vision-transformers)
 - [Contrastive Learning](#contrastive-learning)
 - Language Model (Gemma)
 - KV-Cache
@@ -55,3 +55,17 @@ loss = (loss_i + loss_t) / 2
         - the main idea is that we don't treat the loss over a column / row, instead we treat each entry in the matrix as a binary classification task
             - in other words, it should either be 0 or 1 and we treat them independently from the other entries. this is done by using the **sigmoid** function
             - since we are treating them independently, we don't have to worry about the complexities of normalization over large matrices, which simplifies the computation and improves numerical stability
+
+- **why use a contrastive vision encoder?**
+    - we want the embeddings to be good representations that can be contrasted with the text embeddings
+        - in other words, we basically contrast the text with the image
+    - another reason we use it is because it's cheaper to train
+
+## Vision Transformers
+- the way these transformers work is that we take the image and split it into patches
+    - then we extract information using a convolutional and flatten it to produce an embedding of patches (**recall**: when we flatten, we lose positional information)
+- then we add positional encodings to the patch embeddings to restore the spaital information 
+    - these positional encodings are typically vectors of the same length as the patch embeddings and are added element-wise to each patch embedding
+- after getting the positional encodings, we pass it to the transformer and the output we get are the **contextualized embeddings**
+    - since the input is an image, the model isn't auto-regressive. this basically means that the model doesn't make predictions sequentially i.e the next prediction does not rely on the previous ones
+    - each patch will basically have information about it's position and what is around it in the image
