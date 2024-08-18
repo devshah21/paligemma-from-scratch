@@ -32,6 +32,60 @@ class SiglipVisionConfig:
         self.attention_dropout = attention_dropout
         self.layer_norm_eps = layer_norm_eps
         self.num_image_tokens = num_image_tokens
+
+
+class SiglipVisionEmbeddings(nn.Module):
+    
+    def __init__(self, config: SiglipVisionConfig):
+        super().__init__()
+        self.config = config
+        self.embed_dim = config.hidden_size
+        self.image_size = config.image_size
+        self.patch_size = config.patch_size
+    
+        self.patch_embeddings = nn.Conv2d(
+            in_channels=config.num_channels,
+            out_channels=self.embed_dim,
+            kernel_size=self.patch_size,
+            stride=self.patch_size,
+            padding="valid" #this means that no padding is added
+        )
+        
+        self.num_patches = (self.image_size // self.patch_size) ** 2 # image size is the # of pixels and we divide that by how big is each patch
+        # we raise it to the power of 2 since we have 2 dimensions
+        
+        self.num_positions = self.num_patches # number of positional encodings = # of patches we have
+        self.position_embeddings = nn.Embedding(self.num_positions, self.embed_dim) # the embeddings are learned and we have num_positions number of embeddings
+        # recall that each of these are added to the information extracted from the convolution 
+        
+        self.register_buffer(
+            "position_ids",
+            torch.arange(self.num_positions).expand((1, -1)),
+            persistent=False
+        )
+    
+    def forward(self, pixel_values: torch.FloatTensor) -> torch.Tensor:
+        
+        _, _, height, width = pixel_values.shape ## the dimensions are batch_size, channels, height, and width
+        
+        patch_embeds = self.patch_embeddings(pixel_values) # get the patch embeddings from the convolution
+        # [batch_size, embed_dim, num_patches_height, num_patches_width] -> [batch_size, embed_dim, num_patches]
+        # note that num_patches_height = height // patch_size and num_patches_width = width // patch_size
+        
+        embeddings = patch_embeds.flatten(2)
+        # we flatten this and get a 1-d list of patches
+        
+        embeddings = embeddings.transpose(1, 2)
+        # [batch_size, embed_dim, num_patches] -> [batch_size, num_patches, embed_dim]
+        # we transpose bc we want the number of patches to come before the embedding dimensions
+
+        embeddings = embeddings + self.position_embeddings(self.position_ids)
+        # we add the positional encodings to the embeddings
+        
+        return embeddings
+        # [batch_size, num_patches, embed_dim]
+        
+        
         
 class SiglipVisionTransformer(nn.Module):
     
