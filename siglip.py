@@ -85,7 +85,30 @@ class SiglipVisionEmbeddings(nn.Module):
         return embeddings
         # [batch_size, num_patches, embed_dim]
         
-class SiglipEncoder(nn.Module):
+class SiglipMLp(nn.Module):
+    
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.fc1 = nn.Linear(config.hidden_size, config.intermediate_size) # takes each of the embeddings and expands them into an intermediate size
+        self.fc2 = nn.Linear(config.intermediate_size, config.hidden_size) # apply non linearity and compress it back into hidden_size
+        
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        
+        hidden_states = self.fc1(hidden_states)
+        # [batch_size, num_patches, embed_dim] -> [batch_size, num_patches, intermediate_size]
+        
+        hidden_states = nn.functional.gelu(hidden_states, approximate="tanh")
+        
+        # we use the gelu non-linearity because gelu works better than relu for this model architecture (research has shown this)
+        
+        hidden_states = self.fc2(hidden_states) # apply the linear layer (recompressing it back into the hidden_size)
+        
+        return hidden_states
+        
+        
+        
+class SiglipEncoderLayer(nn.Module):
     
     def __init__(self, config: SiglipVisionConfig):
         super().__init__()
