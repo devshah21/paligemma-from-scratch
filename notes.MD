@@ -69,3 +69,21 @@ loss = (loss_i + loss_t) / 2
 - after getting the positional encodings, we pass it to the transformer and the output we get are the **contextualized embeddings**
     - since the input is an image, the model isn't auto-regressive. this basically means that the model doesn't make predictions sequentially i.e the next prediction does not rely on the previous ones
     - each patch will basically have information about it's position and what is around it in the image
+
+### Aside: Batch Normalization
+- in a linear layer, we have a couple parameters, the first one is input features and the 2nd one is output features
+    - the input features basically tells us how many features a single input (x) has and the output features will tell us how many neurons there are in that layer
+        - the way this works is that there is 1 output feature produced per neuron and since it's a linear layer, it basically dots the input features with the weights and adds a bias term and that is the output for that single neuron
+- the problem is called **covariate shift**
+    - when you have an input vector that changes from 1 batch to another in magnitude, then the output will also change in magnitude 
+        - so let's say we have the first input with values between 1 and 2, but then the next input vector is much larger, this causes a problem. since the loss is dependent on the output of the layer, having large differences between input vectors will also cause the loss to be large, which in turn will impact the gradient, and then the weights will be impacted and will cause the overall model not to do as well (learns very slowly)
+- to get around this issue, we implement batch normalization
+    - we compute a statistic for each dimension of each item / class (given that they are represented by a vector)
+        - we compute the mean and the variance of that dimension and then we normalize each item by subtracting the mean from it and dividing by the standard deviation: $\hat{x}^{(k)} = \frac{x^{(k)} - \mathbb{E}[x^{(k)}]}{\sqrt{\mathrm{Var}[x^{(k)}]}}$
+- by doing this, it will make each dimension of each item be distributed like a gaussian with mean 0 and variance of 1
+    - this will make the model oscillate less which prevents the loss from being large -> which means model performs well / converge faster
+- the only draw back is that if the batch size is small, it won't do very well as it depends on what other items are in that batch
+
+### Aside pt. 2: Layer Normalization
+- for layer normalization, instead of computing the statistics along the batch dimensions, we calculate them along the item dimension
+    - we compute the mean and variance based on the item dimension, thus we process each item independently
