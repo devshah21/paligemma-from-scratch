@@ -87,3 +87,21 @@ loss = (loss_i + loss_t) / 2
 ### Aside pt. 2: Layer Normalization
 - for layer normalization, instead of computing the statistics along the batch dimensions, we calculate them along the item dimension
     - we compute the mean and variance based on the item dimension, thus we process each item independently
+
+### Aside pt. 3: Skip Connections
+- the idea behind skip connections is that it is used to bypass certain layers and directly pass the input to a deeper layer
+- the reason we do this is to help address the problem of vanishing / exploding gradients and allows information to flow more easily through the model
+
+### Understanding Encoder
+- the input to the encoder portion of the vision transformer are the patch embeddings with the positional encodings
+    - this input is first passed through a layer normalization (see above). the output of this layer normalization is saved for a skip connection that we do later
+- the output from the layer norm. is sent to the attention mechanism. it takes in 3 inputs: key, query, value
+    - the attention mechanism is computed as follows: $output = softmax(\frac{Q \cdot K^T}{\sqrt(d_m)}) \cdot V$
+- the output from the self-attention is summed up with the skip connection from the layer normalization
+- it is then passed through another layer normalization, which passes the output from that to a MLP (multilayer perceptron)
+    - note: an MLP is a list of linear layers
+    - the output from this layer normalization is also saved for a skip connection later
+- the final step is to a sum with the skip connection from the 2nd layer normalization
+- the overall output of the encoder are contexualized patches / embeddings
+
+
