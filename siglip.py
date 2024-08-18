@@ -85,6 +85,41 @@ class SiglipVisionEmbeddings(nn.Module):
         return embeddings
         # [batch_size, num_patches, embed_dim]
         
+class SiglipEncoder(nn.Module):
+    
+    def __init__(self, config: SiglipVisionConfig):
+        super().__init__()
+        self.embed_dim = config.hidden_size # this is the embedding dimension 
+        self.self_attn = SiglipAttention(config)
+        self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+        self.mlp = SiglipMLP(config)
+        self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_eps)
+
+    
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        
+        residual = hidden_states ## save the skip connection for later
+        # residual size: [batch_size, num_patches, embed_dim]
+        hidden_states = self.layer_norm1(hidden_states)
+        # layer normalization does not change size (linear)
+        
+        hidden_states, _ = self.self_attn(hidden_states=hidden_states)
+        # self attention does not change the shape either
+        
+        hidden_states = hidden_states + residual # add the skip connection
+        
+        residual = hidden_states # save skip connection
+        
+        hidden_states = self.layer_norm2(hidden_states) # layer normalization
+        
+        hidden_states = self.mlp(hidden_states) # mlp (series of linear layers)
+        
+        hidden_states = residual + hidden_states
+        
+        return hidden_states
+        
+        
+        
         
         
 class SiglipVisionTransformer(nn.Module):
