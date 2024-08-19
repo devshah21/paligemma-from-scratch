@@ -85,7 +85,7 @@ class SiglipVisionEmbeddings(nn.Module):
         return embeddings
         # [batch_size, num_patches, embed_dim]
         
-class SiglipMLp(nn.Module):
+class SiglipMLP(nn.Module):
     
     def __init__(self, config):
         super().__init__()
@@ -105,6 +105,43 @@ class SiglipMLp(nn.Module):
         hidden_states = self.fc2(hidden_states) # apply the linear layer (recompressing it back into the hidden_size)
         
         return hidden_states
+
+class SiglipAttention(nn.Module):
+    
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.embed_dim = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.embed_dim // self.num_heads
+        self.scale = self.head_dim**-0.5 # this is basically 1 / sqrt(self.head_dim)
+        self.dropout = config.attention_dropout
+        
+        self.k_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.v_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.q_proj = nn.Linear(self.embed_dim, self.embed_dim)
+        self.out_proj = nn.Linear(self.embed_dim, self.embed_dim)
+    
+    def forward(self, hidden_states: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        
+        batch_size, seq_len, _ = hidden_states.size()
+        # the dimension are: [batch_size, num_patches, embed_dim]
+        # we can think of the patches = sequence length
+        
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
+        
+        # this basically is a transformation of the input sequence, but at this current moment, each token is independent of one another
+        
+        query_states = query_states.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2) # we are splitting this according to the number of heads
+        key_states = key_states.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        # the dimension for all the states are now: [batch_size, num_heads, num_patches, head_dim]
+        
+        attn_weights = (torch.matmul(query_states, key_states.transpose(2, 3)) * self.scale)
+        # attn_weights: [batch_size, num_heads, num_patches, num_patches]
+        
         
         
         
