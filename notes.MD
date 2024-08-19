@@ -4,6 +4,7 @@
 
 - [Vision Transformers](#vision-transformers)
 - [Contrastive Learning](#contrastive-learning)
+- [Multihead Attention](#multi-head-attention)
 - Language Model (Gemma)
 - KV-Cache
 - Rotary Positional Embedding
@@ -105,3 +106,29 @@ loss = (loss_i + loss_t) / 2
 - the overall output of the encoder are contexualized patches / embeddings
 
 
+## Multi-Head Attention
+- multi-head attention is the models way of contexualizing the input
+    - for example, let's look at the vision transformer: we start with a sequence of patches (patches are represented by a vector)
+        - the multi-head attention essentially contexualizes these patches / vectors => this means the output will be of the same dimension as the input
+        - however, the key thing to note here is that the embeddings / patches which were given as input now not only have information about themselves, but the surrounding patches as well (they are now contexualized)
+- for a language model, it is slightly different:
+    - we start with a sequence of tokens as the input (this is not necessarily always true, but for simplicity assume 1 token = 1 word)
+    - now what happens is that after being passed through the self-attention, each token no longer only captures information about itself, but it also about all the past tokens (the words that came before it)
+- we want the language models to predict the next token correctly and for transformers, they can generate the contexualized embeddings in parallel, what we can also do is compute the loss for each prediction in parallel
+    - this is the reason the transformer is so powerful (because it computes all this in parallel), in a single pass it can be trained on how to predict the next token given the previous ones
+
+- **understanding key, query, value**
+    - step 1: we are going to convert our input $x$ into keys, queries, and values
+        - suppose $x$ has size of (4, 1024), to produce the KVQ matrices, we multiply it with $W_q, W_k, W_v$
+            - the size of these other matrices are (1024, 1024), but since we are dealing with multi-head attention, suppose num_heads = 8, then the size would be (1024, 8, 128) 
+                - to put this more intuitively, the matrix has 1024 rows, each row has a smaller 1-d vector of size 128 and there are 8 of them
+        - after the matrix multiplication, the output dimension of the KVQ matrices is (4, 8, 128)
+            - in other words, 4 rows with each row having 8 heads of size 128
+        - **note:** each head works with a smaller part of the embedding of each token i.e the first head will only look at the first 128 tokens of the entire sequence and so on and so forth
+    - step 2: now we will treat each head independently
+        - after transposing, we go from (4, 8, 128) -> (8, 4, 128): this basically has 8 rows (number of heads) and each row has a smaller matrix with 4 tokens and each token has 128 dimensions
+            - we do this because now we can deal with each head independently 
+    - step 3: calculate the attention for each head in parallel
+        - we first compute the transpose of the key matrix and then do matrix multiplication with the query matrix for each head
+            - the output will be a matrix which represents the dot product of one token with another token (similarity scores)
+            
