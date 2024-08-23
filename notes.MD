@@ -131,4 +131,18 @@ loss = (loss_i + loss_t) / 2
     - step 3: calculate the attention for each head in parallel
         - we first compute the transpose of the key matrix and then do matrix multiplication with the query matrix for each head
             - the output will be a matrix which represents the dot product of one token with another token (similarity scores)
-            
+        - we have the square-root of the number of dimensions is done to keep the magnitude constant
+        - we don't want previous words to be related to future words because the future words come after the current word, so there should be no relationship between those words
+            - we apply an attention mask to the matrix to do this. we replace the values with -inf so that when we apply the softmax, the value will be 0, indicating no relationship between the words
+    - step 4: multiply by the V sequence
+        - the next step is to do a matrix multiplication of the current attention weights matrix with the values matrix
+            - the output is a matrix where the number of columns represents the number of dimensions that head is responsible for
+                - for example if we have 1024 dimensions and 8 heads, then the output of the matrix multiplication would be (4, 4) x (4, 128) = (4, 128)
+                    - the (4,4) is the attention weights and the (4,128) is the values matrix
+            - each row is a weighted sum of the tokens i.e when we do the matrix multiplication, we multiply the rows with the columns and since we 0 out the values for future tokens, it will be a weighted sum when we do the multiplication (since each row should sum up to 1 because of the softmax)
+    - step 5: transpose back
+        - very straight forward, we're transposing the matrix back into the original dimension form
+            - taking the example from above, we are now going from (8, 4, 128) -> (4, 8, 128) i.e (heads, sequence, tokens) -> (sequence, heads, tokens)
+    - step 6: concatenate the output from all the heads
+        - given that each head is computing the contextualized embeddings using a part of each token, we can concatenate all the heads together 
+            - 
