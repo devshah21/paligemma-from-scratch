@@ -145,4 +145,8 @@ loss = (loss_i + loss_t) / 2
             - taking the example from above, we are now going from (8, 4, 128) -> (4, 8, 128) i.e (heads, sequence, tokens) -> (sequence, heads, tokens)
     - step 6: concatenate the output from all the heads
         - given that each head is computing the contextualized embeddings using a part of each token, we can concatenate all the heads together 
-            - 
+    - step 7: multiply by $w_0$
+        - the $w_0$ matrix has embed_size x embed_size in dimension
+            - the reason we do this is to transform the concatenated output back into the original embedding space
+            - each attention head only focuses on it's however many tokens, but it's fragmented across the different subspaces, by multiplying by this, we project the output back into the original embedding dimension and thus, combine all the information from all heads into a single, coherent representation
+    
