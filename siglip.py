@@ -142,6 +142,33 @@ class SiglipAttention(nn.Module):
         attn_weights = (torch.matmul(query_states, key_states.transpose(2, 3)) * self.scale)
         # attn_weights: [batch_size, num_heads, num_patches, num_patches]
         
+        if attn_weights.size() != (batch_size, self.num_heads, seq_len, seq_len): 
+            raise ValueError(
+                f"Attention weights should have these dimensions {(batch_size, self.num_heads, seq_len, seq_len)}, but they have the following dimensions:" 
+                f"{attn_weights.size()}"
+            )
+        # verifying dimensions of the attention weights
+        
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype) # by doing dim=-1, we are applying it to the last dimension (the columns)
+        # applying the softmax here: [batch_size, num_heads, num_patches, num_patches]
+        
+        attn_weights = nn.functional.dropout(attn_weights, p=self.dropout, training=self.training)
+        
+        attn_output = torch.matmul(attn_weights, value_states) # matrix multiplication of the values matrix with the attn_weights
+        
+        attn_output = attn_output.transpose(1, 2).contiguous() # transpose back, the contiguous allows it to be in one continuous block of memory
+        
+        attn_output = attn_output.reshape(batch_size, seq_len, self.embed_dim) 
+        # [batch_size, num_patches, num_heads, head_dim] -> [batch_size, num_patches, embed_dim]
+        
+        attn_output = self.out_proj(attn_output) # multiply by W_0
+        
+        
+        return attn_output
+        
+        
+        
+        
         
         
         
